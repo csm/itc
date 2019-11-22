@@ -1,4 +1,4 @@
-(defproject com.github.csm/itc "0.1.1-SNAPSHOT"
+(defproject com.github.csm/itc "0.1.1"
   :description "Interval tree clocks for clojure/clojurescript"
   :url "https://github.com/csm/itc"
   :license {:name "LGPLv3"
