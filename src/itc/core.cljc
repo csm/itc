@@ -1,5 +1,8 @@
 (ns itc.core
-  (:refer-clojure :exclude [drop peek #?(:cljs -peek)]))
+  (:refer-clojure :exclude [drop peek #?(:cljs -peek)])
+  #?(:cljs (:require-macros itc.core)))
+
+(def ^{:dynamic true :private true} *print-type* true)
 
 (defprotocol INode
   (-leaf? [this])
@@ -84,8 +87,8 @@
       :else
       (-normalize
         (->NodeEvent value
-                         (-join left (-lift (-left that) (- (-value that) value)))
-                         (-join right (-lift (-right that) (- (-value that) value))))))))
+                     (-join left (-lift (-left that) (- (-value that) value)))
+                     (-join right (-lift (-right that) (- (-value that) value))))))))
 
 (defrecord LeafEvent [value]
   INode
@@ -283,15 +286,13 @@
 
 #?(:clj
    (do
-     (def ^:dynamic *print-type* true)
-
      (defmethod print-method LeafId
        [this w]
-       (.write w (str (when *print-type* "#itc/id ") (pr-str (:value this)))))
+       (.write w (str (when *print-type* "#itc.core/id ") (pr-str (:value this)))))
 
      (defmethod print-method NodeId
        [this w]
-       (.write w (str (when *print-type* "#itc/id ")
+       (.write w (str (when *print-type* "#itc.core/id ")
                       \( (binding [*print-type* false]
                            (pr-str (-left this)))
                       ", "
@@ -302,12 +303,12 @@
      (defmethod print-method LeafEvent
        [this w]
        (.write w (str
-                   (when *print-type* "#itc/event ")
+                   (when *print-type* "#itc.core/event ")
                    (pr-str (-value this)))))
 
      (defmethod print-method NodeEvent
        [this w]
-       (.write w (str (when *print-type* "#itc/event ")
+       (.write w (str (when *print-type* "#itc.core/event ")
                       \(
                       (pr-str (-value this))
                       ", "
@@ -320,13 +321,68 @@
 
      (defmethod print-method Stamp
        [this w]
-       (.write w (str "#itc/stamp ("
+       (.write w (str "#itc.core/stamp ("
                       (binding [*print-type* false]
                         (pr-str (:id this)))
                       ", "
                       (binding [*print-type* false]
                         (pr-str (:event this)))
-                      \))))))
+                      \)))))
+
+   :cljs
+   (extend-protocol IPrintWithWriter
+     NodeEvent
+     (-pr-writer [this writer _opts]
+       (-write writer (str
+                        (when *print-type* "#itc.core/event ")
+                        \(
+                        (pr-str (-value this))
+                        ", "
+                        (binding [*print-type* false]
+                          (pr-str (-left this)))
+                        ", "
+                        (binding [*print-type* false]
+                          (pr-str (-right this)))
+                        \))))
+
+     LeafEvent
+     (-pr-writer [this writer _opts]
+       (-write writer (str (when *print-type* "#itc.core/event ")
+                           (pr-str (-value this)))))
+
+     NodeId
+     (-pr-writer [this writer _opts]
+       (-write writer (str (when *print-type* "#itc.core/id ")
+                           \(
+                           (binding [*print-type* false]
+                             (pr-str (-left this)))
+                           ", "
+                           (binding [*print-type* false]
+                             (pr-str (-right this)))
+                           \))))
+
+     LeafId
+     (-pr-writer [this writer _opts]
+       (-write writer (str (when *print-type* "#itc.core/id ")
+                           (pr-str (if (-zero? this) 0 1)))))
+
+     Stamp
+     (-pr-writer [this writer _opts]
+       (-write writer (str "#itc.core/stamp ("
+                           (binding [*print-type* false]
+                             (pr-str (-get-id this)))
+                           ", "
+                           (binding [*print-type* false]
+                             (pr-str (-get-event this)))
+                           ")")))))
+
+#?(:cljs
+   (extend-protocol IComparable
+     Stamp
+     (-compare [this that]
+       (cond (-leq this that) -1
+             (-leq that this) 1
+             :else 0))))
 
 (defn ->id
   [form]

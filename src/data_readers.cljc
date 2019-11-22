@@ -1,3 +1,3 @@
-{itc/stamp itc.core/->stamp
- itc/id    itc.core/->id
- itc/event itc.core/->event}
+{itc.core/stamp itc.core/->stamp
+ itc.core/id    itc.core/->id
+ itc.core/event itc.core/->event}
